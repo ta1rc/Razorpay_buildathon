@@ -1,0 +1,154 @@
+// Prisma schema for the agentic-commerce middleware.
+// SQLite has no native enum support, so "enum-like" fields are plain String
+// columns; the allowed values live as TS union types in src/lib/enums.ts.
+// JSON-shaped fields are also stored as TEXT (JSON.stringify'd); app code
+// parses them via src/lib/json.ts helpers.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Merchant {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  vertical        String // Vertical: "ELECTRONICS" | "GROCERY" | "FASHION"
+  siteDescription String
+  siteBasePath    String? // e.g. "/sites/techbazaar" — null for CSV-only merchants (no storefront to scrape)
+  createdAt       DateTime @default(now())
+
+  catalogVersions CatalogVersion[]
+
+  @@map("merchants")
+}
+
+model CatalogVersion {
+  id         String   @id @default(cuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  status     String   @default("DRAFT") // CatalogStatus: "DRAFT" | "PENDING_APPROVAL" | "LIVE"
+  createdAt  DateTime @default(now())
+  approvedAt DateTime?
+
+  products Product[]
+  bundles  Bundle[]
+
+  @@map("catalog_versions")
+}
+
+model Product {
+  id               String         @id @default(cuid())
+  catalogVersionId String
+  catalogVersion   CatalogVersion @relation(fields: [catalogVersionId], references: [id])
+
+  // staticJson: { common: {...}, facet: {...} } — see plan for concrete per-vertical shapes
+  staticJson String
+  // dynamicJson: { price, currency, discountPct, stockCount, lastVerifiedAt }
+  dynamicJson String
+  // provenanceJson: { sourceUrl, rawSnippet, extractionMethod }
+  provenanceJson String
+
+  verificationLevel String   @default("UNVERIFIED") // VerificationLevel: "VERIFIED" | "INFERRED" | "UNVERIFIED"
+  confidenceScore   Float    @default(0)
+  freshnessState    String   @default("FRESH") // FreshnessState: "FRESH" | "STALE" | "EXPIRED"
+  lastCheckedAt     DateTime @default(now())
+
+  ambiguityFlags AmbiguityFlag[]
+
+  @@map("products")
+}
+
+model Bundle {
+  id               String         @id @default(cuid())
+  catalogVersionId String
+  catalogVersion   CatalogVersion @relation(fields: [catalogVersionId], references: [id])
+  name             String
+  description      String
+  // productSkusJson: string[] of SKUs this bundle contains
+  productSkusJson  String
+  bundlePrice      Int // paise — the combined discounted price
+  discountPct      Int
+  createdAt        DateTime       @default(now())
+
+  @@map("bundles")
+}
+
+model AmbiguityFlag {
+  id             String   @id @default(cuid())
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id])
+  field          String
+  reason         String
+  suggestedValue String
+  resolved       Boolean  @default(false)
+  resolution     String?
+  createdAt      DateTime @default(now())
+
+  @@map("ambiguity_flags")
+}
+
+model ChatSession {
+  id       String @id @default(cuid())
+  vertical String // Vertical: "ELECTRONICS" | "GROCERY" | "FASHION"
+  createdAt DateTime @default(now())
+  // pendingSlotsJson: which facet fields the agent still needs answers for, and why
+  pendingSlotsJson String @default("[]")
+  // assumptionsJson: defaults the agent stated explicitly when the user left something unanswered
+  assumptionsJson  String @default("[]")
+
+  messages ChatMessage[]
+  quotes   Quote[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id            String      @id @default(cuid())
+  chatSessionId String
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id])
+  role          String // ChatRole: "USER" | "AGENT"
+  content       String
+  // structuredJson: optional structured payload (clarifying questions, comparison cards, basket)
+  structuredJson String?
+  createdAt     DateTime @default(now())
+
+  @@map("chat_messages")
+}
+
+model Quote {
+  id            String      @id @default(cuid())
+  chatSessionId String
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id])
+  // itemsJson: [{ productId, qty, requestedPrice, verifiedPrice, verifiedStock }]
+  itemsJson     String
+  valid         Boolean  @default(true)
+  invalidReason String?
+  createdAt     DateTime @default(now())
+
+  orders Order[]
+
+  @@map("quotes")
+}
+
+model Order {
+  id                String   @id @default(cuid())
+  quoteId           String
+  quote             Quote    @relation(fields: [quoteId], references: [id])
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  amount            Int // paise
+  status            String   @default("CREATED") // OrderStatus: "CREATED" | "PAID" | "FAILED"
+  signatureVerified Boolean  @default(false)
+  webhookReceived   Boolean  @default(false)
+  // timelineJson: the full audit chain snapshot assembled incrementally
+  timelineJson      String   @default("[]")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("orders")
+}

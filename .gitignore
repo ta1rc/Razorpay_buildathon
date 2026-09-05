@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# local sqlite db — regenerate with `npx prisma db push && npm run db:seed`
+*.db
+*.db-journal
