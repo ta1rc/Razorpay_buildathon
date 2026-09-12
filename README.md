@@ -154,4 +154,4 @@ public/demo/
 
 ---
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
