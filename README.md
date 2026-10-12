@@ -1,5 +1,12 @@
 # Agentic Commerce Middleware
 
+![Next.js](https://img.shields.io/badge/Next.js_16-000000?logo=nextdotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-2D3748?logo=prisma&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
+![Razorpay](https://img.shields.io/badge/Razorpay-Test_Mode-0C2451?logo=razorpay&logoColor=white)
+![Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?logo=googlegemini&logoColor=white)
+
 **A middle layer that turns any merchant's catalog — scraped from a live site or uploaded as a messy CSV — into an AI-agent-readable format, so a buyer can shop by talking to an agent and check out through a real Razorpay Test Mode payment, with every step audited.**
 
 Built for Razorpay's Buildathon, **Track 01 — AI Growth & Agentic Commerce**: *"Build an agent that grows revenue for a merchant on Razorpay test-mode APIs, or that makes a merchant transactable by an AI buyer end to end."*
@@ -151,7 +158,3 @@ public/demo/
 - **Correctness-critical logic is never left to the LLM.** Price parsing, duplicate detection, live requote validity, and alternative-suggestion ranking are all deterministic code — the LLM is only ever responsible for picking among real candidates and phrasing the explanation. This is what makes the "failure handling" and "audit trail" stages trustworthy rather than just plausible-looking.
 - **One LIVE catalog version per merchant, enforced server-side.** Re-onboarding a merchant demotes the previous live version rather than leaving two "live-ish" versions around — otherwise a buyer's chat pick and the checkout-time requote could silently read from different snapshots.
 - **SQLite is a deliberate choice for a hackathon demo**, not a production recommendation — it means anyone can clone this and run it with zero external services.
-
----
-
-
